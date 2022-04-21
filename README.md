@@ -29,6 +29,7 @@ runApp(app.R)
 
 Alternatively, the dashboard can be run straight from the R console:
 ```
+library(shiny)
 runGitHub("penguin-shinydashboard", "gaudet-d")
 ```
 
