@@ -18,18 +18,18 @@ install.packages(c("palmerpenguins", "ggplot2", "magrittr", "dplyr", "GGally", "
 
 ### Installing
 
-The zip file can be installed right from GitHub or alternatively downloaded using the following code in your R console:
-
-```
-library(devtools)
-install_github("gaudet-d/penguin-shinydashboard")
-```
+The zip file can be installed right from GitHub. Alternatively, the dashboard can be called straight from the R console (see Executing program). 
 
 ### Executing program
 
-
+If the code was downloaded using a zip file. 
 ```
 runApp(app.R)
+```
+
+Alternatively, the dashboard can be run straight from the R console:
+```
+runGitHub("penguin-shinydashboard", "gaudet-d")
 ```
 
 <!-- ## Help (Known issues, etc.)
