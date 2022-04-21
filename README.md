@@ -12,8 +12,8 @@ The dashboard is created in R using RShiny.
 
 The following code can be run in your R console to install the required R packages:
 ```
-install.packages("palmerpenguins", "ggplot2", "magrittr", "dplyr", "GGally", "plotly", "shiny", "shinydashboard", "tidyverse",
- "caret", "MASS")
+install.packages(c("palmerpenguins", "ggplot2", "magrittr", "dplyr", "GGally", "plotly", "shiny", "shinydashboard", "tidyverse",
+ "caret", "MASS"))
 ```
 
 ### Installing
