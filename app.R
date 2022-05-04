@@ -8,7 +8,6 @@
 # Known issues and WIPs:
 ## Reduce duplication in LDA server code.
 
-# Last updated April 20th, 2022
 
 library(palmerpenguins) # penguin data
 library(ggplot2) # data visualization
@@ -62,10 +61,11 @@ ui = dashboardPage( #Create a dashboard page, uses library(shinydashboard)
       conditionalPanel(condition = "input.menu1=='dashboard'", 
         tags$hr(), #horizontal rule, i.e. line
         h4("Controls"),
+        p("Pick a different penguin species to see changes in the histograms."),
         radioButtons(
           inputId = "species",
           label = "Penguin Species",
-          choices = c("Adelie", "Chinstrap", "Gentoo", "All"),
+          choices = c("Adelie", "Chinstrap", "Gentoo", "Combined"),
           selected = c("Adelie")
         ),
         selectInput(
@@ -92,7 +92,6 @@ ui = dashboardPage( #Create a dashboard page, uses library(shinydashboard)
                          label = "LDA",
                          choices = c("Bill length (mm)", "Bill depth (mm)", "Flipper length (mm)",
                                      "Body mass (g)"),
-                         #choiceValues = c(3,4,5,6),
                          selected = c("Bill length (mm)")
                        )           
       )
@@ -108,7 +107,7 @@ ui = dashboardPage( #Create a dashboard page, uses library(shinydashboard)
               fluidRow(
                 tabBox(width=12,
                        id = "tabset1", #ID lets us use input$tabset1 on the server to find the current tab.
-                       tabPanel("Overall", "Count of overall penguins by sex, island and species.", tableOutput("crossTab")),
+                       tabPanel("Counts", "Count of overall penguins by sex, island and species.", tableOutput("crossTab")),
                        tabPanel("Summary", "Summary statistics of each variable.", tableOutput("univarSum")),
                        tabPanel("Group means", "Mean values of each variable broken in sex or species.", tableOutput("sexSppSum"))
                 )
@@ -124,10 +123,10 @@ ui = dashboardPage( #Create a dashboard page, uses library(shinydashboard)
                 box(width=5, plotOutput("hist2", height=250)), #Histogram
                 box(width=7, plotOutput("boxplot2", height=250)),
                 tabBox(width=5, 
-                       tabPanel("", p("Select a tab for an introduction to the scatterplots.")),
-                       tabPanel("Below", p("The matrix of scatterplots below shows a scatterplot of each pair, the Pearson correlations in the upper right, and the variable distribution on the diagonal.")),
+                       tabPanel("", p("Select a tab for a description of the scatterplots below and to the right.")),
+                       tabPanel("Below", p("The matrix of scatterplots by species below has pairwise scatterplots in the lower left, the Pearson correlations in the upper right, and the univariate distributions by species along the diagonal.")),
                        tabPanel("Right", p("The scatterplot to the right shows the relationship between variable 1 and 2. The regression lines for each species is included, as is the overall trend line (black)."),
-                                tags$br(), p("For interest's sake: notice that in some cases the direction of the regression line of the overall data is the opposite of the lines broken down by species. This is an example of Simpson's paradox."))
+                                tags$br(), p("Notice that in some cases the direction of the regression line of the overall data is the opposite of the lines broken down by species. This is an example of Simpson's paradox."))
                 ),
                 box(width=7, plotOutput("scatter1", height=250)) #Scatterplot of two covariates
               ),
@@ -138,23 +137,27 @@ ui = dashboardPage( #Create a dashboard page, uses library(shinydashboard)
       #TAB 2: Linear Discriminant Analysis
       tabItem(tabName="analysis",
               h2("Linear Discriminant Analysis"),
-              p("Use linear discriminant (LD) analysis to identify a linear combination of variables that can be used to identify the species membership of the penguins. Try different combinations of variables to see how to model accuracy and the linear discriminants change."),
+              p("Use linear discriminant (LD) analysis to identify a linear combination of variables that can be used to classify the species membership of the penguins. Try different combinations of variables to see how to model accuracy and the linear discriminants change."),
+              p("80% of the penguins are randomly allocated to the training set. The remaining penguins make up the test set. There are 3 classes of penguin: Adelie, Chinstrap, and Gentoo. The linear discriminant model is trained using equal prior probabilities (i.e 1/3)."),
               fluidRow(
-                box(width=6, 
-                    h4("LDs and Model Accuracy"),
+                box(width=12, 
+                    h4("Linear Discriminant Equations"),
                     tags$div(
-                      "LD1 = ", textOutput("LD1"), tags$br(),
-                      "LD2 = ", textOutput("LD2"), tags$br(),
-                      "The model accuracy is: ", span(textOutput("modAcc"), style = "color:red; font-size:150%")
+                      "LD1 = ", textOutput("LD1", inline=T), tags$br(),
+                      "LD2 = ", textOutput("LD2", inline=T)#, tags$br(),
+                      #"Model accuracy: ", span(textOutput("modAcc", inline=T), style = "color:red; font-size:150%")
                     )
-                  ),
-                box(width=6, 
+                  )
+              ),
+                #box(width=6, p("80% of the penguins are randomly allocated to the training set. The remaining penguins make up the test set. There are 3 classes of penguin: Adelie, Chinstrap, and Gentoo. The linear discriminant model is trained using equal prior probabilities (i.e 1/3). The model accuracy is the proportion of correctly classified penguins when predicting the class of the testing set.")),
+              p("The model accuracy is the proportion of correctly classified penguins when predicting the classes using a data set. Let's look at the testing set accuracy."),
+              fluidRow(
+                box(width=8, 
                     h4("Confusion Matrix"),
                     p("The bolded columns are the reference species."),
-                    tableOutput("conMat"))
-              ),
-              fluidRow(
-                box(width=12, plotOutput("LDA1", width=600)) 
+                    tableOutput("conMat.test")),
+                tags$div(tags$br(), h4("Model accuracy"), span(textOutput("modAcc", inline=T), style = "color:red; font-size:150%")),
+                box(width=12, plotOutput("LDA1")) 
               )
       ),
       #TAB 3: Images of Penguins
@@ -196,7 +199,7 @@ server = function(input, output) {
   output$hist1 = renderPlot({ #The reactive expression will update this value when the widget changes
     df = data.frame(penguins)
     df.subset = reactive({ #subset data based on chosen species
-      if(input$species == "All"){a = df} else {a = subset(df, species == input$species)}
+      if(input$species == "Combined"){a = df} else {a = subset(df, species == input$species)}
       return(data.frame(a))
     }) 
     #hist(df.subset()[,which(grepl(as.character(names[input$covar1]), colnames(penguins), fixed=TRUE))],
@@ -211,7 +214,7 @@ server = function(input, output) {
   output$hist2 = renderPlot({ #The reactive expression will update this value when the widget changes
     df = data.frame(penguins)
     df.subset = reactive({ #subset data based on chosen species
-      if(input$species == "All"){a = df} else {a = subset(df, species == input$species)}
+      if(input$species == "Combined"){a = df} else {a = subset(df, species == input$species)}
       return(data.frame(a))
     }) 
     col = ifelse(input$species == "Adelie", "#F8766D", ifelse(input$species == "Chinstrap", "#00BA38", ifelse(input$species == "Gentoo", "#619CFF", "grey75")))     
@@ -226,24 +229,24 @@ server = function(input, output) {
     b = b[-c(4,6,8,9),]
     b = rbind(b, c(sum(b[,1]), sum(b[,2])))
     c1 = c("Adelie", "", "", "Chinstrap", "Gentoo", "")
-    c2 = c("Biscoe", "Dream", "Torgersen", "Dream", "Biscoe", "TOTAL")
+    c2 = c("Biscoe", "Dream", "Torgersen", "Dream", "Biscoe", "<strong>TOTAL</strong>")
     c3 = c(as.vector(b[,1]+b[,2]))
     tab = cbind(c1, c2, b, c3)
     colnames(tab) = c("Species", "Island", "Female", "Male", "TOTAL")
     rownames(tab) = NULL
     tab
-  })
+  }, striped=T, sanitize.text.function=function(x){x}) #Change f'n to identity to interpret the tags.
   
   output$univarSum = renderTable({
-    r1 = summary(penguins$bill_length_mm)[c(1,3,4,6)]
-    r2 = summary(penguins$bill_depth_mm)[c(1,3,4,6)]
-    r3 = summary(penguins$flipper_length_mm)[c(1,3,4,6)]
-    r4 = summary(penguins$body_mass_g)[c(1,3,4,6)]
-    tab = rbind(r1, r2, r3, r4)
-    colnames(tab) = c("Minimum", "Median", "Mean", "Maximum")
+    summ = sapply(penguins, summary)
+    ss = rbind(summ$bill_length_mm, summ$bill_depth_mm, summ$flipper_length_mm, summ$body_mass_g)
+    sdvec = apply(penguins, 2, sd, na.rm=T)
+    tab = cbind(sdvec[3:6], ss)
+    tab = tab[,c(5,1,2,4,7)]
+    colnames(tab) = c("Mean", "SD", "Minimum", "Median", "Maximum")
     rownames(tab) = c("Bill length (mm)", "Bill depth (mm)", "Flipper length (mm)", "Body mass (g)")
     tab
-  }, include.rownames=T)
+  }, include.rownames=T, striped=T)
   
   output$sexSppSum = renderTable({
     penguins = data.frame(penguins)
@@ -264,7 +267,7 @@ server = function(input, output) {
     rownames(mat) = c("Female", "Male", "Adelie", "Chinstrap", "Gentoo")
     colnames(mat) = c("Bill length (mm)", "Bill depth (mm)", "Flipper length (mm)", "Body mass (g)")
     mat
-  }, include.rownames=T)
+  }, include.rownames=T, striped=T)
 
   
   #EDA: Make scatter plot of two covariates - broken up by species
@@ -354,7 +357,7 @@ server = function(input, output) {
   output$LDA1 = renderPlot({
     ###Subset the data
     #Train the model with the training data
-    model = lda(train.changed()[,-1], grouping=train.changed()[,1])
+    model = lda(train.changed()[,-1], grouping=train.changed()[,1], priors=rep(1/3,3))
     #Predict using the testing data
     predictions = model %>% predict(test.changed()[,-1])
     modAccuracy = mean(predictions$class == test.changed()$species) # mean of 1 indicates 100% accuracy.
@@ -365,26 +368,26 @@ server = function(input, output) {
     ggplot(lda.data, aes(LD1, LD2)) +
       geom_point(aes(color=species), size=3) +
       theme_classic() + theme(text = element_text(size = 15)) +
-      labs(title="Linear discriminant plot", x=paste("First linear discriminant (", signif(props[1]*100, digits=4), ")", sep=""),
+      labs(title="Linear discriminant plot for testing data", x=paste("First linear discriminant (", signif(props[1]*100, digits=4), ")", sep=""),
            y=paste("Second linear discriminant (", signif(props[2]*100, digits=4), ")", sep="")) +
       geom_vline(xintercept=c(mean(centx()[1:2]), mean(centx()[2:3])), linetype="dashed") +
       geom_hline(yintercept=c(mean(centy()[1:2]), mean(centy()[2:3])), linetype="dashed") +
       labs(color="Class")
   })
   
-  #LDA: confusion matrix
-  output$conMat = renderTable({
-    model = lda(train.changed()[,-1], grouping=train.changed()[,1])
+  #LDA: confusion matrices for training and testing data sets
+  output$conMat.test = renderTable({
+    model = lda(train.changed()[,-1], grouping=train.changed()[,1], priors=rep(1/3,3))
     #Predict using the testing data
     predictions = model %>% predict(test.changed()[,-1])
     #modAccuracy = mean(predictions$class == test.changed()$species)
     not.mat = confusionMatrix(test.changed()[,1], predictions$class, dnn = c("Prediction", "Reference"))
     as.data.frame.matrix(not.mat$table)
-  }, include.rownames=T)
+  }, include.rownames=T, width="100px")
   
   #LDA: Model Prediction accuracy 
   output$modAcc = renderText({
-    model = lda(train.changed()[,-1], grouping=train.changed()[,1])
+    model = lda(train.changed()[,-1], grouping=train.changed()[,1], priors=rep(1/3,3))
     #Predict using the testing data
     predictions = model %>% predict(test.changed()[,-1])
     modAccuracy = mean(predictions$class == test.changed()$species)
@@ -392,7 +395,7 @@ server = function(input, output) {
   })
   #LDA: Equation for LD1
   output$LD1 = renderText({
-    model = lda(train.changed()[,-1], grouping=train.changed()[,1])
+    model = lda(train.changed()[,-1], grouping=train.changed()[,1], priors=rep(1/3,3))
     factors = colnames(train.changed())[-1]
     coefs = signif(model$scaling[,1], digits=3)
     len = length(coefs)
@@ -400,7 +403,7 @@ server = function(input, output) {
   })
   #LDA: Equation for LD2
   output$LD2 = renderText({
-    model = lda(train.changed()[,-1], grouping=train.changed()[,1])
+    model = lda(train.changed()[,-1], grouping=train.changed()[,1], priors=rep(1/3,3))
     factors = colnames(train.changed())[-1]
     coefs = signif(model$scaling[,2], digits=3)
     len = length(coefs)
