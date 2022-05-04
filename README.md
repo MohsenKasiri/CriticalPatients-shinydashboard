@@ -10,11 +10,14 @@ The dashboard is created in R using RShiny.
 
 ### Dependencies
 
+Running this app will require a reasonably up-to-date version of RStudio. 
+
 The following code can be run in your R console to install the required R packages:
 ```
 install.packages(c("palmerpenguins", "ggplot2", "magrittr", "dplyr", "GGally", "plotly", "shiny", "shinydashboard", "tidyverse",
  "caret", "MASS"))
 ```
+
 
 ### Installing
 
