@@ -165,15 +165,15 @@ ui = dashboardPage( #Create a dashboard page, uses library(shinydashboard)
               h2("Meet the Palmer Penguins!"),
               column(width=6, 
                      h3("Gentoo"),
-                     img(src = "gentoo.jpg", width=300), #Width of image is in pixels.
+                     img(src = "gentoo.jpg", width="100%"), #Width of image is in pixels.
                      p("https://commons.wikimedia.org/wiki/File:Gentoo_penguin.jpg")
               ),
               column(width=6,
                      h3("Adelie"),
-                     img(src = "adelie.jpg", width = 300),
+                     img(src = "adelie.jpg", width = "100%"),
                      p("https://www.flickr.com/photos/rwoan/25706044408"),
                      h3("Chinstrap"),
-                     img(src = "chinstrap.jpg", width = 300), 
+                     img(src = "chinstrap.jpg", width = "100%"), 
                      p("https://www.flickr.com/photos/cmichel67/39985995")
               )
       )
